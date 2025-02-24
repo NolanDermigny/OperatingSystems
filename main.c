@@ -14,18 +14,30 @@ int main(int argc, char *argv[]) {
     char command[MAX_COMMAND_LENGTH];
     char *args[MAX_ARGUMENTS];
     char *PATH[MAX_PATH_LENGTH];
-    int cd,path;
+    char *temp_path;     
+    int cd,path;    //built in checks
+    int i;
+    bool batch = false;
 
     //set default path
-    PATH[1] = "/bin";
+    PATH[0] = "/bin";
+    //set the rest of PATH to " ", with NULL terminator
+    for(i = 1; i < MAX_PATH_LENGTH - 1; i++) {
+        PATH[i] = " ";
+    }
+    PATH[MAX_PATH_LENGTH - 1] = '\0';
     
     if(argc == 2) {
         //batch mode
         freopen(argv[1], "r", stdin);
+        batch = true;
     }
 
+    //prompt/execution loop
     while(1) {
-        printf("wish> ");
+        if(!batch) {
+            printf("wish> ");
+        }
         fflush(stdout);
 
         //read command from user
@@ -56,7 +68,19 @@ int main(int argc, char *argv[]) {
         cd = cd_check(args, arg_count);
         
         //check path
-        path = path_check(args, PATH);
+        if(strcmp(args[0], "path") == 0) {
+            //clear path
+            for(i = 0; i < MAX_PATH_LENGTH; i++) {
+                PATH[i] = " ";
+            }
+
+            //set path
+            for(i = 1; i < arg_count; i++) {
+                PATH[i - 1] = args[i];
+                //printf("%s ", PATH[i - 1]);
+            }
+            path = 1;
+        }
 
         //if one of the built ins ran, skip execution(not needed for exit)
         if(cd == 1 || path == 1) {
@@ -67,14 +91,22 @@ int main(int argc, char *argv[]) {
         pid_t pid = fork();
 
         if(pid < 0) {
-            perror("fork failed");
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "An error has occurred\n");
         } else if (pid == 0) {
-            //child process executes the command
-            execvp(args[0], args);
-            //this should not return
-            perror("execvp failed");
-            exit(EXIT_FAILURE);
+            i = 0;
+            //checks all the paths
+            while(strcmp(PATH[i], " ") != 0) {
+                //concatenates the command to the path
+                temp_path = malloc(strlen(PATH[i]) + strlen(args[0]) + 2);
+                if (temp_path) {
+                    sprintf(temp_path, "%s/%s", PATH[i], args[0]);
+                    if(access(temp_path, X_OK) == 0) {
+                        execv(temp_path, args);
+                        fprintf(stderr, "An error has occurred");
+                    }
+                }
+                i++;
+            }
         } else {
             //parent process waits for the child to complete
             int status;
