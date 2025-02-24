@@ -42,13 +42,16 @@ int main(int argc, char *argv[]) {
 
         //read command from user
         if(fgets(command, sizeof(command), stdin) == NULL) {
-            printf("\n");
+            if(batch) {
+                exit(0);
+            }
             break;
         }
 
         //remove trailing '\n'
         command[strcspn(command, "\n")] = '\0';
         
+ 
         //tokenize command into arguments
         char *token = strtok(command, " ");
         int arg_count = 0;
@@ -91,22 +94,26 @@ int main(int argc, char *argv[]) {
         pid_t pid = fork();
 
         if(pid < 0) {
-            fprintf(stderr, "An error has occurred\n");
+            error();
         } else if (pid == 0) {
             i = 0;
             //checks all the paths
-            while(strcmp(PATH[i], " ") != 0) {
+            while(PATH[i] != " ") {
                 //concatenates the command to the path
                 temp_path = malloc(strlen(PATH[i]) + strlen(args[0]) + 2);
                 if (temp_path) {
                     sprintf(temp_path, "%s/%s", PATH[i], args[0]);
                     if(access(temp_path, X_OK) == 0) {
+                        printf("running %s " , temp_path);
                         execv(temp_path, args);
-                        fprintf(stderr, "An error has occurred");
+                        error();
                     }
+                    free(temp_path);
                 }
                 i++;
             }
+            //no valid path found
+            //error();
         } else {
             //parent process waits for the child to complete
             int status;
