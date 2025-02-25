@@ -72,11 +72,11 @@ int main(int argc, char *argv[]) {
 
             //set path
             for(i = 1; i < arg_count; i++) {
-                //conacatenate "/" to front of args as per test 7
-                path_element = malloc(strlen(args[i]) + 1);
-                sprintf(path_element, "/%s", args[i]);
+                //need to allocate correctly for PATH
+                path_element = malloc(strlen(args[i]));
+                sprintf(path_element, "%s", args[i]);
                 PATH[i - 1] = path_element;
-                printf("%s\n, ", PATH[i - 1]);
+                //printf("%s\n", PATH[i - 1]);
             }
             pathC = 1;
         }
@@ -100,23 +100,26 @@ int main(int argc, char *argv[]) {
                 temp_path = malloc(strlen(PATH[i]) + strlen(args[0]) + 2);
                 if (temp_path) {
                     sprintf(temp_path, "%s/%s", PATH[i], args[0]);
-                    printf("%s\n", temp_path);
+                    //printf("%s\n", temp_path);
                     if(access(temp_path, X_OK) == 0) {
                         run = true;
                         printf("%s being executed", temp_path);
                         execv(temp_path, args);
-                        printf("throwing an execv error\n");
+                        //printf("throwing an execv error\n");
                         error();
                     }
                 }
+                //printf("made it to run check\n");
                 if(run == true) {
+                    //printf("in run check\n");
                     break;
                 }
                 free(temp_path);
                 i++;
+                //printf("i = %d\n", i );
             }
             //no valid path found
-            printf("no path found error\n");
+            //printf("no path found error\n");
             error();
             exit(0);
         } else {
