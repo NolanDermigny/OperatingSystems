@@ -13,20 +13,21 @@ int exit_check(char *command[], int arg_count) {
         return 0;
     }
 
-    if(strcmp(command[0],"exit") == 0 && arg_count == 1) {
+    if(strcmp(command[0], "exit") == 0 && arg_count == 1) {
         exit(0);
-    } else if(strcmp(command[0],"exit") == 0) {
+    } else if(strcmp(command[0], "exit") == 0) {
         error(); 
         return 1;
     }
     return 0;
 }
 
-/*NOT IN USE
+/*
+NOT IN USE
 returns 1 if the path was changed and 0 if not`
 */
 int path_check(char *command[], char *PATH[], int arg_count) {
-    if(strcmp(command[0],"path") == 0) {
+    if(strcmp(command[0], "path") == 0) {
         int i = 0;
         while(PATH[i] != NULL && *PATH[i] != '\0') {
             PATH[i] = " ";
@@ -52,7 +53,7 @@ int cd_check(char *command[], int arg_count) {
         return 0;
     }
 
-    if(strcmp(command[0],"cd") == 0) {
+    if(strcmp(command[0], "cd") == 0) {
         if (arg_count < 2 || command[1] == NULL) {
             error();
             return 1;

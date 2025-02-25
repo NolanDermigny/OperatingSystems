@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
     char *PATH[MAX_PATH_LENGTH];
     char *temp_path; 
     char *path_element;
-    int cdC,pathC,exitC;    //built in checks
+    int cdC, pathC, exitC;    //built in checks
     int i;
     bool batch = false;
     //set default path

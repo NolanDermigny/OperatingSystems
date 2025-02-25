@@ -6,4 +6,4 @@ int path_check(char *command[], char *PATH[], int arg_count);
 int cd_check(char *command[], int arg_count);
 void error();
 
-#endif /*WISH_H*/
+#endif /* WISH_H */
