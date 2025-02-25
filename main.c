@@ -14,18 +14,13 @@ int main(int argc, char *argv[]) {
     char command[MAX_COMMAND_LENGTH];
     char *args[MAX_ARGUMENTS];
     char *PATH[MAX_PATH_LENGTH];
-    char *temp_path;     
-    int cd,path;    //built in checks
+    char *temp_path; 
+    char *path_element;
+    int cdC,pathC,exitC;    //built in checks
     int i;
     bool batch = false;
-
     //set default path
     PATH[0] = "/bin";
-    //set the rest of PATH to " ", with NULL terminator
-    for(i = 1; i < MAX_PATH_LENGTH - 1; i++) {
-        PATH[i] = " ";
-    }
-    PATH[MAX_PATH_LENGTH - 1] = '\0';
     
     if(argc == 2) {
         //batch mode
@@ -35,16 +30,13 @@ int main(int argc, char *argv[]) {
 
     //prompt/execution loop
     while(1) {
-        if(!batch) {
+        if(batch == false) {
             printf("wish> ");
         }
         fflush(stdout);
 
         //read command from user
         if(fgets(command, sizeof(command), stdin) == NULL) {
-            if(batch) {
-                exit(0);
-            }
             break;
         }
 
@@ -61,32 +53,36 @@ int main(int argc, char *argv[]) {
         }
         args[arg_count] = NULL;
 
-        cd = 0;
-        path = 0;
+        cdC = 0;
+        pathC = 0;
+        exitC = 0;
 
         //exit command check
-        exit_check(args, arg_count);
+        exitC = exit_check(args, arg_count);
         
         //cd check
-        cd = cd_check(args, arg_count);
+        cdC = cd_check(args, arg_count);
         
         //check path
         if(strcmp(args[0], "path") == 0) {
             //clear path
             for(i = 0; i < MAX_PATH_LENGTH; i++) {
-                PATH[i] = " ";
+                PATH[i] = NULL;
             }
 
             //set path
             for(i = 1; i < arg_count; i++) {
-                PATH[i - 1] = args[i];
-                //printf("%s ", PATH[i - 1]);
+                //conacatenate "/" to front of args as per test 7
+                path_element = malloc(strlen(args[i]) + 1);
+                sprintf(path_element, "/%s", args[i]);
+                PATH[i - 1] = path_element;
+                printf("%s\n, ", PATH[i - 1]);
             }
-            path = 1;
+            pathC = 1;
         }
 
         //if one of the built ins ran, skip execution(not needed for exit)
-        if(cd == 1 || path == 1) {
+        if(cdC == 1 || pathC == 1 || exitC == 1) {
             continue;
         }
 
@@ -97,23 +93,32 @@ int main(int argc, char *argv[]) {
             error();
         } else if (pid == 0) {
             i = 0;
+            bool run = false;
             //checks all the paths
-            while(PATH[i] != " ") {
+            while(PATH[i] != NULL) {
                 //concatenates the command to the path
                 temp_path = malloc(strlen(PATH[i]) + strlen(args[0]) + 2);
                 if (temp_path) {
                     sprintf(temp_path, "%s/%s", PATH[i], args[0]);
+                    printf("%s\n", temp_path);
                     if(access(temp_path, X_OK) == 0) {
-                        printf("running %s " , temp_path);
+                        run = true;
+                        printf("%s being executed", temp_path);
                         execv(temp_path, args);
+                        printf("throwing an execv error\n");
                         error();
                     }
-                    free(temp_path);
                 }
+                if(run == true) {
+                    break;
+                }
+                free(temp_path);
                 i++;
             }
             //no valid path found
-            //error();
+            printf("no path found error\n");
+            error();
+            exit(0);
         } else {
             //parent process waits for the child to complete
             int status;

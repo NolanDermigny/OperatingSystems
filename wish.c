@@ -16,7 +16,8 @@ int exit_check(char *command[], int arg_count) {
     if(strcmp(command[0],"exit") == 0 && arg_count == 1) {
         exit(0);
     } else if(strcmp(command[0],"exit") == 0) {
-        error();    
+        error(); 
+        return 1;
     }
     return 0;
 }
@@ -60,7 +61,7 @@ int cd_check(char *command[], int arg_count) {
             error();
             return 1;
         }
-           
+        return 1;
     } else {
         return 0;
     }
