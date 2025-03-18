@@ -24,6 +24,9 @@ int main(int argc, char *argv[]) {
     bool batch = false;     //batch mode flag
     bool redirect = false;  //redirection flag
 
+    for(i = 0; i < MAX_PATH_LENGTH; i++) {
+        PATH[i] = NULL;
+    }
     //set default path
     PATH[0] = "/bin";
     
@@ -55,7 +58,7 @@ int main(int argc, char *argv[]) {
         //remove trailing '\n'
         command[strcspn(command, "\n")] = '\0';
         
-        //remove whitespace from command if needed
+        //removing whitespace
         if(command[0] == ' ') {
             char *cmd_ptr = &command[0];
             while(*cmd_ptr == ' ') {
@@ -63,7 +66,7 @@ int main(int argc, char *argv[]) {
             }
             strcpy(command, cmd_ptr);
         }
-
+        
         char *outfile = NULL;
         bool redirect = false;
 
@@ -113,6 +116,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+
         cdC = 0;
         pathC = 0;
         exitC = 0;
@@ -133,7 +137,7 @@ int main(int argc, char *argv[]) {
             //set path
             for(i = 1; i < arg_count; i++) {
                 //need to allocate correctly for PATH
-                path_element = malloc(strlen(args[i]));
+                path_element = malloc(strlen(args[i]) + 1); 
                 sprintf(path_element, "%s", args[i]);
                 PATH[i - 1] = path_element;
             }
@@ -157,6 +161,7 @@ int main(int argc, char *argv[]) {
                 if (fd < 0) {
                     exit(0);
                 }   
+                printf("fd = %d\n", fd);
                 // Redirect stdout to the file
                 if (dup2(fd, STDOUT_FILENO) < 0) {
                     exit(0);
@@ -176,14 +181,15 @@ int main(int argc, char *argv[]) {
                     if(access(temp_path, X_OK) == 0) {
                         run = true;
                         execv(temp_path, args);
+                        free(temp_path);
                         exit(0);
                         
                     }
+                    free(temp_path);
                 }
                 if(run == true) {
                     break;
                 }
-                free(temp_path);
                 i++;
             }
             //no valid path found
@@ -201,4 +207,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-
