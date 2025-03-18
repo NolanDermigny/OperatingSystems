@@ -4,6 +4,9 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <stdbool.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "wish.h"
 
 #define MAX_COMMAND_LENGTH 100
@@ -18,7 +21,9 @@ int main(int argc, char *argv[]) {
     char *path_element;
     int cdC, pathC, exitC;    //built in checks
     int i;
-    bool batch = false;
+    bool batch = false;     //batch mode flag
+    bool redirect = false;  //redirection flag
+
     //set default path
     PATH[0] = "/bin";
     
@@ -43,15 +48,56 @@ int main(int argc, char *argv[]) {
         //remove trailing '\n'
         command[strcspn(command, "\n")] = '\0';
         
- 
-        //tokenize command into arguments
-        char *token = strtok(command, " ");
+        char *outfile = NULL;
+        bool redirect = false;
+
+        //Redirect Check
+        char *redirect_pos = strchr(command, '>');
+        if (redirect_pos != NULL) {
+            redirect = true;
+            // Separate the command from the file
+            *redirect_pos = '\0'; // Split the string at '>'
+            redirect_pos++; // Move past '>'
+
+            // Trim leading whitespace from the file name
+            while (*redirect_pos == ' ') {
+                redirect_pos++;
+            }
+            //no file after >
+            if (*redirect_pos != '\0') {
+                outfile = redirect_pos;
+            } else {
+                error();
+                continue;
+            }
+            // greater than 1 > symbol
+            if(strchr(outfile, '>') != NULL) {
+                error();
+                continue;
+            }
+            //greater than 1 file
+            if(strchr(outfile, ' ') != NULL) {
+                error();
+                continue;
+            } 
+                
+        }        
+        
+        // Now tokenize the command part into args
         int arg_count = 0;
-        while(token != NULL && arg_count < MAX_ARGUMENTS - 1) {
+        char *token = strtok(command, " ");
+        while (token != NULL && arg_count < MAX_ARGUMENTS - 1) {
             args[arg_count++] = token;
             token = strtok(NULL, " ");
         }
+      
         args[arg_count] = NULL;
+
+        //zero arg check, can happen from redirection
+        if(args[0] == NULL) {
+            error();
+            continue;
+        }
 
         cdC = 0;
         pathC = 0;
@@ -76,12 +122,11 @@ int main(int argc, char *argv[]) {
                 path_element = malloc(strlen(args[i]));
                 sprintf(path_element, "%s", args[i]);
                 PATH[i - 1] = path_element;
-                //printf("%s\n", PATH[i - 1]);
             }
             pathC = 1;
         }
 
-        //if one of the built ins ran, skip execution(not needed for exit)
+        //if one of the built ins ran, skip execution
         if(cdC == 1 || pathC == 1 || exitC == 1) {
             continue;
         }
@@ -92,6 +137,20 @@ int main(int argc, char *argv[]) {
         if(pid < 0) {
             error();
         } else if (pid == 0) {
+            //redirect if needed
+            if(redirect == true) {
+                int fd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);                
+                if (fd < 0) {
+                    exit(0);
+                }   
+                // Redirect stdout to the file
+                if (dup2(fd, STDOUT_FILENO) < 0) {
+                    exit(0);
+                }   
+
+                close(fd);
+            }
+
             i = 0;
             bool run = false;
             //checks all the paths
@@ -100,28 +159,27 @@ int main(int argc, char *argv[]) {
                 temp_path = malloc(strlen(PATH[i]) + strlen(args[0]) + 2);
                 if (temp_path) {
                     sprintf(temp_path, "%s/%s", PATH[i], args[0]);
-                    //printf("%s\n", temp_path);
                     if(access(temp_path, X_OK) == 0) {
                         run = true;
-                        printf("%s being executed", temp_path);
+                        printf("execv( %s)\n", temp_path);
                         execv(temp_path, args);
-                        //printf("throwing an execv error\n");
-                        error();
+                        //printf("execv error from pid: %d \n", pid);
+                        exit(0);
+                        
                     }
                 }
-                //printf("made it to run check\n");
                 if(run == true) {
-                    //printf("in run check\n");
                     break;
                 }
                 free(temp_path);
                 i++;
-                //printf("i = %d\n", i );
             }
             //no valid path found
-            //printf("no path found error\n");
-            error();
-            exit(0);
+            if(run == false) {
+                error();
+                //printf("no valid path found error \n");
+                exit(0);
+            }
         } else {
             //parent process waits for the child to complete
             int status;
