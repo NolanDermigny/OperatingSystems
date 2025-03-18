@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include "wish.h"
 
-#define MAX_COMMAND_LENGTH 100
+#define MAX_COMMAND_LENGTH 200
 #define MAX_ARGUMENTS 10
 #define MAX_PATH_LENGTH 10
 
@@ -29,8 +29,15 @@ int main(int argc, char *argv[]) {
     
     if(argc == 2) {
         //batch mode
-        freopen(argv[1], "r", stdin);
+        if(freopen(argv[1], "r", stdin) == NULL){
+            error();
+            exit(1);
+        }
         batch = true;
+    } else if( argc > 2) {
+        // to many args
+        error();
+        exit(1);
     }
 
     //prompt/execution loop
@@ -48,6 +55,15 @@ int main(int argc, char *argv[]) {
         //remove trailing '\n'
         command[strcspn(command, "\n")] = '\0';
         
+        //remove whitespace from command if needed
+        if(command[0] == ' ') {
+            char *cmd_ptr = &command[0];
+            while(*cmd_ptr == ' ') {
+                cmd_ptr++;
+            }
+            strcpy(command, cmd_ptr);
+        }
+
         char *outfile = NULL;
         bool redirect = false;
 
@@ -55,11 +71,9 @@ int main(int argc, char *argv[]) {
         char *redirect_pos = strchr(command, '>');
         if (redirect_pos != NULL) {
             redirect = true;
-            // Separate the command from the file
-            *redirect_pos = '\0'; // Split the string at '>'
-            redirect_pos++; // Move past '>'
+            *redirect_pos = '\0';
+            redirect_pos++; 
 
-            // Trim leading whitespace from the file name
             while (*redirect_pos == ' ') {
                 redirect_pos++;
             }
@@ -94,7 +108,7 @@ int main(int argc, char *argv[]) {
         args[arg_count] = NULL;
 
         //zero arg check, can happen from redirection
-        if(args[0] == NULL) {
+        if(arg_count == 0) {
             error();
             continue;
         }
@@ -161,9 +175,7 @@ int main(int argc, char *argv[]) {
                     sprintf(temp_path, "%s/%s", PATH[i], args[0]);
                     if(access(temp_path, X_OK) == 0) {
                         run = true;
-                        printf("execv( %s)\n", temp_path);
                         execv(temp_path, args);
-                        //printf("execv error from pid: %d \n", pid);
                         exit(0);
                         
                     }
